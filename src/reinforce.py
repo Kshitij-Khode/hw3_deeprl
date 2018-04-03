@@ -21,37 +21,44 @@ class Reinforce(object):
 
         self.model = model
 
-        with tf.variable_scope('policyEst'):
-            self.state  = tf.placeholder(dtype=tf.float32, name='state')
-            self.action = tf.placeholder(dtype=tf.int32, name='action')
-            self.target = tf.placeholder(dtype=tf.float32, name='target')
+        # with tf.variable_scope('policyEst'):
+        #     self.state  = tf.placeholder(dtype=tf.float32, name='state')
+        #     self.target = tf.placeholder(dtype=tf.float32, name='target')
 
-        self.actProb     = tf.get_default_graph().get_tensor_by_name('%s:0' % [n.name for n in tf.get_default_graph().as_graph_def().node][-1])
-        self.pickActProb = tf.gather(self.actProb, self.action)
+        self.inpState    = tf.get_default_graph().get_tensor_by_name('dense_1_input:0')
+        self.outActProb  = tf.get_default_graph().get_tensor_by_name('dense_4/Softmax:0')
 
-        self.loss = -tf.log(self.pickActProb) * self.target
+        self.execAct     = tf.placeholder(dtype=tf.int32, name='execAct')
+        self.pickActProb = tf.gather(self.outActProb, self.execAct)
+
+        self.trgRew =  tf.placeholder(dtype=tf.float32, name='trgRew')
+        self.loss   = -tf.log(self.pickActProb) * self.trgRew
 
         self.optimizer = tf.train.AdamOptimizer(learning_rate=lr)
         self.trainOp   = self.optimizer.minimize(self.loss)
 
         self.model.summary()
 
-    def train(self, env):
+    def train(self, env, numEps):
         # Trains the model on a single episode using REINFORCE.
         # TODO: Implement this method. It may be helpful to call the class
         #       method generate_episode() to generate training data.
 
         gamma   = 1.0
-        max_eps = 3000
 
-        for ep in range(max_eps):
-            episode = zip(self.generate_episode(env))
+        for ep in range(numEps):
+            states, actions, rewards = self.generate_episode(env)
+            trew                     = [r/1e-2 for r in rewards]
 
-        # trew = [r/1e-2 for r in rewards]
+            print('ep:%s, lRew:%s' % (ep, rewards[-1]))
 
-        # for t, trans in enumerate(episode):
-        #     Gt = sum(gamma**s * obs[2] for s, obs in enumerate(episode[t:]))
-        #     self.update(trans[0], trans[1], trans[2])
+            Gt = [sum(gamma**d * rew for d, rew in enumerate(trew[k:]))
+                                     for k in xrange(len(trew))]
+            Gt = np.tile(np.matrix(Gt), (4,1)).transpose()
+
+            _, loss = self.sess.run([self.trainOp, self.loss], feed_dict={
+                self.inpState: states, self.execAct: actions, self.trgRew: Gt
+            })
 
     def generate_episode(self, env):
         # Generates an episode by executing the current policy in the given env.
@@ -65,8 +72,10 @@ class Reinforce(object):
         rewards = []
         state   = env.reset()
 
-        for t in itertools.count():
-            actionProbs = self.predict(state)
+        for _ in itertools.count():
+            env.render()
+
+            actionProbs = self.model.predict(np.expand_dims(state,0))[0]
             action      = np.random.choice(np.arange(len(actionProbs)), p=actionProbs)
             nstate, rew, term, _ = env.step(action)
 
@@ -79,9 +88,6 @@ class Reinforce(object):
             state = nstate
 
         return states, actions, rewards
-
-    def predict(self, state):
-        return self.sess.run(self.actProb, {self.state: state})
 
     def update(self, state, action, target):
         pass
@@ -96,7 +102,7 @@ def parse_arguments():
     parser.add_argument('--num-episodes', dest='num_episodes', type=int,
                         default=50000, help="Number of episodes to train on.")
     parser.add_argument('--lr', dest='lr', type=float,
-                        default=5e-4, help="The learning rate.")
+                        default=1e-4, help="The learning rate.")
 
     return parser.parse_args()
 
@@ -116,7 +122,7 @@ def main(args):
 
     # TODO: Train the model using REINFORCE and plot the learning curve.
     reInfModel = Reinforce(model, lr)
-    reInfModel.train(env)
+    reInfModel.train(env, num_episodes)
 
 
 if __name__ == '__main__':

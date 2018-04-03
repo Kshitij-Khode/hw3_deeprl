@@ -45,8 +45,12 @@ class Reinforce(object):
         #       method generate_episode() to generate training data.
 
         gamma   = 1.0
+        saveInt = 5000
 
         for ep in range(numEps):
+
+            if ep % saveInt == 0: self.save_model_weights(ep)
+
             states, actions, rewards = self.generate_episode(env)
             trew                     = [r/1e-2 for r in rewards]
 
@@ -59,6 +63,7 @@ class Reinforce(object):
             _, loss = self.sess.run([self.trainOp, self.loss], feed_dict={
                 self.inpState: states, self.execAct: actions, self.trgRew: Gt
             })
+
 
     def generate_episode(self, env):
         # Generates an episode by executing the current policy in the given env.
@@ -73,7 +78,7 @@ class Reinforce(object):
         state   = env.reset()
 
         for _ in itertools.count():
-            env.render()
+            # env.render()
 
             actionProbs = self.model.predict(np.expand_dims(state,0))[0]
             action      = np.random.choice(np.arange(len(actionProbs)), p=actionProbs)
@@ -89,8 +94,9 @@ class Reinforce(object):
 
         return states, actions, rewards
 
-    def update(self, state, action, target):
-        pass
+    def save_model_weights(self, prefix):
+        self.model.save_weights('./store/%s_weights.ckpt' % prefix, overwrite=True)
+        print('saved ./model/%s_weights.ckpt' % prefix)
 
 
 def parse_arguments():
@@ -102,7 +108,7 @@ def parse_arguments():
     parser.add_argument('--num-episodes', dest='num_episodes', type=int,
                         default=50000, help="Number of episodes to train on.")
     parser.add_argument('--lr', dest='lr', type=float,
-                        default=1e-4, help="The learning rate.")
+                        default=1e-3, help="The learning rate.")
 
     return parser.parse_args()
 

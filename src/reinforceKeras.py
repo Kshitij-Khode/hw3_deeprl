@@ -19,27 +19,11 @@ class Reinforce(object):
 
         print('Reinforce __init__: lr:%s' % lr)
 
-        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
-
-        keras.backend.tensorflow_backend.set_session(self.sess)
-
         self.model = model
 
-        # with tf.variable_scope('policyEst'):
-        #     self.state  = tf.placeholder(dtype=tf.float32, name='state')
-        #     self.target = tf.placeholder(dtype=tf.float32, name='target')
-
-        self.inpState    = tf.get_default_graph().get_tensor_by_name('dense_1_input:0')
-        self.outActProb  = tf.get_default_graph().get_tensor_by_name('dense_4/Softmax:0')
-
-        self.execAct     = tf.placeholder(dtype=tf.int32, name='execAct')
-        self.pickActProb = tf.gather(self.outActProb, self.execAct)
-
-        self.trgRew =  tf.placeholder(dtype=tf.float32, name='trgRew')
-        self.loss   = -tf.log(self.pickActProb) * self.trgRew
-
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=lr)
-        self.trainOp   = self.optimizer.minimize(self.loss)
+        self.model.compile(loss='categorical_crossentropy',
+                           optimizer=keras.optimizers.Adam(lr=lr),
+                           metrics=['accuracy'])
 
         self.model.summary()
 
@@ -65,13 +49,15 @@ class Reinforce(object):
 
             Gt = [np.sum([pow(gamma,k-t)*trew[k] for k in xrange(t,len(trew))])
                                                  for t in xrange(len(trew))]
-            Gt = np.tile(np.matrix(Gt), (4,1)).transpose()
+            GtTemp = []
+            for t in xrange(len(Gt)):
+                GtTemp.append([Gt[t] if actions[t] == i else 0 for i in xrange(4)])
+            Gt     = np.matrix(GtTemp)
+            states = np.matrix(states)
 
-            print('ep:%s, len:%s, Gt[0]:%s, cRew:%s' % (ep, len(trew), Gt[0,0], np.sum(trew)))
+            print('ep:%s, len:%s, Gt[0]:%s, cRew:%s' % (ep, len(trew), Gt[0], np.sum(trew)))
 
-            _, loss = self.sess.run([self.trainOp, self.loss], feed_dict={
-                self.inpState: states, self.execAct: actions, self.trgRew: Gt
-            })
+            self.model.train_on_batch(states, Gt)
 
         self.save_model_weights(numEps)
         plt.show()

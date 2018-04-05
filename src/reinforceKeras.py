@@ -45,7 +45,7 @@ class Reinforce(object):
             if ep % testInt == 0: self.test(env, 100, ep)
 
             states, actions, rewards = self.generate_episode(env)
-            trew                     = [r*1e-2 for r in rewards]
+            trew                     = [r for r in rewards]
 
             Gt = [np.sum([pow(gamma,k-t)*trew[k] for k in xrange(t,len(trew))])
                                                  for t in xrange(len(trew))]
@@ -55,12 +55,13 @@ class Reinforce(object):
             Gt     = np.matrix(GtTemp)
             states = np.matrix(states)
 
-            print('ep:%s, len:%s, Gt[0]:%s, cRew:%s' % (ep, len(trew), Gt[0], np.sum(trew)))
+            print('ep:%s, len:%s, Gt[0]:%s, ctRew:%s, cRew:%s' %
+                 (ep, len(trew), Gt[0], np.sum(trew), np.sum(rewards)))
 
             self.model.train_on_batch(states, Gt)
 
         self.save_model_weights(numEps)
-        plt.show()
+        plt.show(block=True)
 
     def test(self, env, numEps, trainEps):
         epRews = []
@@ -103,11 +104,11 @@ class Reinforce(object):
             #     actionProbs,
             #     rew))
 
-            if term: break
-
             states.append(state)
             actions.append(action)
             rewards.append(rew)
+
+            if term: break
 
             state = nstate
 
@@ -152,10 +153,11 @@ def main(args):
 
     # TODO: Train the model using REINFORCE and plot the learning curve.
     reInfModel = Reinforce(model, lr)
+    # reInfModel.load_model_weights(weight_path)
     reInfModel.train(env, num_episodes)
 
     # reInfModel.load_model_weights(weight_path)
-    # reInfModel.test(env, num_episodes)
+    # reInfModel.test(env, num_episodes, None)
 
 
 if __name__ == '__main__':

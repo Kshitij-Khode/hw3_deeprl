@@ -1,4 +1,4 @@
-import sys, argparse, keras, gym, matplotlib, time, itertools
+import sys, argparse, keras, gym, matplotlib, time, itertools, os
 
 import numpy      as np
 import tensorflow as tf
@@ -9,7 +9,7 @@ from keras import optimizers
 class Reinforce(object):
     # Implementation of the policy gradient method REINFORCE.
 
-    def __init__(self, model, lr):
+    def __init__(self, model, lr, loadWeight, storeWeight):
         # TODO: Define any training operations and optimizers here, initialize
         #       your variables, or alternately compile your model here.
 
@@ -42,6 +42,11 @@ class Reinforce(object):
         self.trainOp   = self.optimizer.minimize(self.loss)
 
         self.model.summary()
+
+        if loadWeight: self.load_model_weights(loadWeight)
+        if storeWeight:
+            if not os.path.exists(storeWeight): os.makedirs(storeWeight)
+            self.storePath = storeWeight
 
     def train(self, env, numEps):
         # Trains the model on a single episode using REINFORCE.
@@ -77,6 +82,7 @@ class Reinforce(object):
         plt.show()
 
     def test(self, env, numEps, trainEps):
+
         epRews = []
         for ep in xrange(numEps):
             _, _, rewards = self.generate_episode(env)
@@ -128,8 +134,8 @@ class Reinforce(object):
         return states, actions, rewards
 
     def save_model_weights(self, prefix):
-        self.model.save_weights('./store/%s_weights.ckpt' % prefix, overwrite=True)
-        print('saved ./model/%s_weights.ckpt' % prefix)
+        self.model.save_weights('%s%s_weights.ckpt' % (self.storePath, prefix), overwrite=True)
+        print('saved %s%s_weights.ckpt' % (self.storePath, prefix))
 
     def load_model_weights(self, weight_file):
         self.model.load_weights(weight_file)
@@ -137,40 +143,34 @@ class Reinforce(object):
 def parse_arguments():
     # Command-line flags are defined here.
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-config-path', dest='model_config_path',
-                        type=str, default='LunarLander-v2-config.json',
-                        help="Path to the model config file.")
-    parser.add_argument('--weight-path', dest='weight_path', type=str)
-    parser.add_argument('--num-episodes', dest='num_episodes', type=int,
-                        default=50000, help="Number of episodes to train on.")
-    parser.add_argument('--lr', dest='lr', type=float,
-                        default=5e-4, help="The learning rate.")
+    parser.add_argument('--modelPath', dest='modelPath', type=str, default='')
+    parser.add_argument('--numEps', dest='numEps', type=int, default=55000)
+    parser.add_argument('--lr', dest='lr', type=float, default=5e-4)
+    parser.add_argument('--loadWeight', dest='loadWeight', type=str, default='')
+    parser.add_argument('--storeWeight', dest='storeWeight', type=str, default='')
 
     return parser.parse_args()
-
 
 def main(args):
     # Parse command-line arguments.
     args              = parse_arguments()
-    model_config_path = args.model_config_path
-    # num_episodes      = args.num_episodes
-    num_episodes      = 55000
+    modelPath         = args.modelPath
+    numEps            = args.numEps
     lr                = args.lr
-    weight_path       = args.weight_path
+    loadWeight        = args.loadWeight
+    storeWeight       = args.storeWeight
 
     # Create the environment.
     env = gym.make('LunarLander-v2')
 
     # Load the policy model from file.
-    with open(model_config_path, 'r') as f: model = keras.models.model_from_json(f.read())
+    with open(modelPath, 'r') as f: model = keras.models.model_from_json(f.read())
 
     # TODO: Train the model using REINFORCE and plot the learning curve.
-    reInfModel = Reinforce(model, lr)
-    reInfModel.load_model_weights(weight_path)
-    reInfModel.train(env, num_episodes)
+    reInfModel = Reinforce(model, lr, loadWeight, storeWeight)
 
-    # reInfModel.load_model_weights(weight_path)
-    # reInfModel.test(env, num_episodes)
+    reInfModel.train(env, numEps)
+    # reInfModel.test(env, numEps, 0)
 
 
 if __name__ == '__main__':

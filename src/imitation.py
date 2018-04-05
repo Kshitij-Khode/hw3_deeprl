@@ -54,7 +54,7 @@ class Imitation():
         nstate = envir.reset()
         max_epi_len = 1000
         for _ in xrange(max_epi_len):
-            if render: envir.render()
+            # if render: envir.render()
             states += [nstate]
             n = nstate
             np_array = np.array([[n[i] for i in xrange(len(n))]])

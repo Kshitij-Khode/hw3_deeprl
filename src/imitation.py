@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import keras
 import random
-import gym
+import gym, time
 
 D1 = []
 D10 = []
@@ -63,8 +63,10 @@ class Imitation():
             onehot = np.zeros(env.action_space.n)
             onehot[action] = 1.0
             actions += [onehot]
-            nstate, rew, _, _ = envir.step(action)
+            nstate, rew, t, _ = envir.step(action)
             rewards += [rew]
+
+            if t: break
 
         return states, actions, rewards
 
@@ -130,6 +132,7 @@ def main(args):
 
     # TODO: Train cloned models using imitation learning, and record their
     #       performance.
+
     imitation1 = Imitation(model_config_path, expert_weights_path)
     (loss1, acc1) = imitation1.train(env, num_episodes=1, render = False)
 
@@ -148,13 +151,9 @@ def main(args):
         rewards = []
         for _ in xrange(num_episodes):
             _, _, rew = imit.run_model(env, rend)
-            rewards += rew
+            rewards.append(np.sum(rew))
 
-        Sum = sum(rewards)
-        avg = Sum/len(rewards)
-        std = (sum([(r-avg)**2 for r in rewards])/len(rewards))**0.5
-
-        return avg, std
+        return np.mean(rewards), np.std(rewards)
 
     (mean1, std1) = calculate_mean_std(imitation1, True)
     (mean10, std10) = calculate_mean_std(imitation10, True)
@@ -166,13 +165,9 @@ def main(args):
         rewards = []
         for _ in xrange(num_episodes):
             _, _, rew = imit.run_expert(env, rend)
-            rewards += rew
+            rewards.append(np.sum(rew))
 
-        Sum = sum(rewards)
-        avg = Sum/len(rewards)
-        std = (sum([(r-avg)**2 for r in rewards])/len(rewards))**0.5
-
-        return avg, std
+        return np.mean(rewards), np.std(rewards)
 
     (meanE1, stdE1) = calculate_mean_std_exp(imitation1, True)
     (meanE10, stdE10) = calculate_mean_std_exp(imitation10, True)

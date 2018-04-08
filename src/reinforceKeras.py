@@ -84,6 +84,8 @@ class Reinforce(object):
             _, _, rewards = self.generate_episode(env)
             epRews.append(np.sum(rewards))
 
+            print('final: tAccRew:%s' % np.sum(rewards))
+
         self.meanRews.append(np.mean(epRews))
         self.stdRews.append(np.std(epRews))
         self.epsX.append(trainEps)
@@ -108,12 +110,13 @@ class Reinforce(object):
         state   = env.reset()
 
         for _ in itertools.count():
-            # env.render()
+            env.render()
 
             actionProbs = self.model.predict(np.expand_dims(state,0))[0]
 
             action = np.random.choice(np.arange(len(actionProbs)), p=actionProbs)
             nstate, rew, term, _ = env.step(action)
+
 
             # print('actionInt:%s, actionProbs:%s, rew:%s' % (np.arange(len(actionProbs)),
             #     actionProbs,
@@ -122,6 +125,9 @@ class Reinforce(object):
             states.append(state)
             actions.append(action)
             rewards.append(rew)
+
+            print('sRew:%s' % np.sum(rewards))
+            time.sleep(0.1)
 
             if term: break
 
@@ -172,7 +178,7 @@ def main(args):
     # reInfModel.train(env, num_episodes)
 
     reInfModel.load_model_weights(weight_path)
-    reInfModel.test(env, num_episodes, None)
+    reInfModel.test(env, 100, None)
 
 
 if __name__ == '__main__':

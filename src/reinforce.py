@@ -42,6 +42,7 @@ class Reinforce(object):
         self.trainOp   = self.optimizer.minimize(self.loss)
 
         self.model.summary()
+        tf.summary.FileWriter('./store/', self.sess.graph)
 
     def train(self, env, numEps):
         # Trains the model on a single episode using REINFORCE.
@@ -166,7 +167,7 @@ def main(args):
 
     # TODO: Train the model using REINFORCE and plot the learning curve.
     reInfModel = Reinforce(model, lr)
-    reInfModel.load_model_weights(weight_path)
+    # reInfModel.load_model_weights(weight_path)
     reInfModel.train(env, num_episodes)
 
     # reInfModel.load_model_weights(weight_path)

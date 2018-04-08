@@ -22,7 +22,8 @@ def main():
             print('reward: %s' % reward)
             print('done: %s' % done)
             print('info: %s' % info)
-            time.sleep(1)
+            if obs[-1] or obs[-2]: time.sleep(1)
+            if reward > 0: time.sleep(5)
 
 if __name__ == '__main__':
     main()

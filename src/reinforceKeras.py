@@ -17,7 +17,14 @@ class Reinforce(object):
         self.stdRews  = []
         self.epsX     = []
 
+        self.tCumRews = []
+        self.tEpsX     = []
+
         print('Reinforce __init__: lr:%s' % lr)
+
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+
+        keras.backend.tensorflow_backend.set_session(self.sess)
 
         self.model = model
 
@@ -26,6 +33,7 @@ class Reinforce(object):
                            metrics=['accuracy'])
 
         self.model.summary()
+        tf.summary.FileWriter('./store/', self.sess.graph)
 
     def train(self, env, numEps):
         # Trains the model on a single episode using REINFORCE.
@@ -35,9 +43,10 @@ class Reinforce(object):
         plt.ion()
         plt.figure()
 
-        gamma   = 1.0
-        saveInt = 5000
-        testInt = 1000
+        gamma    = 1.0
+        saveInt  = 5000
+        testInt  = 1000
+        tPlotInt = 100
 
         for ep in xrange(numEps):
 
@@ -57,6 +66,12 @@ class Reinforce(object):
 
             print('ep:%s, len:%s, Gt[0]:%s, ctRew:%s, cRew:%s' %
                  (ep, len(trew), Gt[0], np.sum(trew), np.sum(rewards)))
+
+            # self.tEpsX.append(ep);
+            # self.tCumRews.append(np.sum(rewards));
+            # if ep % tPlotInt == 0:
+            #     plt.plot(self.tEpsX, self.tCumRews);
+            #     plt.pause(0.001);
 
             self.model.train_on_batch(states, Gt)
 
@@ -154,10 +169,10 @@ def main(args):
     # TODO: Train the model using REINFORCE and plot the learning curve.
     reInfModel = Reinforce(model, lr)
     # reInfModel.load_model_weights(weight_path)
-    reInfModel.train(env, num_episodes)
+    # reInfModel.train(env, num_episodes)
 
-    # reInfModel.load_model_weights(weight_path)
-    # reInfModel.test(env, num_episodes, None)
+    reInfModel.load_model_weights(weight_path)
+    reInfModel.test(env, num_episodes, None)
 
 
 if __name__ == '__main__':

@@ -9,13 +9,16 @@ from keras import optimizers
 class Reinforce(object):
     # Implementation of the policy gradient method REINFORCE.
 
-    def __init__(self, model, lr, loadWeight, storeWeight):
+    def __init__(self, model, lr, lWPath, sWPath):
         # TODO: Define any training operations and optimizers here, initialize
         #       your variables, or alternately compile your model here.
 
         self.meanRews = []
         self.stdRews  = []
         self.epsX     = []
+
+        self.tCumRews = []
+        self.tEpsX    = []
 
         print('Reinforce __init__: lr:%s' % lr)
 
@@ -25,12 +28,13 @@ class Reinforce(object):
 
         self.model.summary()
 
-        if loadWeight: self.load_model_weights(loadWeight)
-        if storeWeight:
-            if not os.path.exists(storeWeight): os.makedirs(storeWeight)
-            self.storePath = storeWeight
+        if lWPath:
+            self.load_model_weights(lWPath)
+        if sWPath:
+            if not os.path.exists(sWPath): os.makedirs(sWPath)
+            self.storePath = sWPath
 
-    def train(self, env, numEps):
+    def train(self, env, nTrainEps):
         # Trains the model on a single episode using REINFORCE.
         # TODO: Implement this method. It may be helpful to call the class
         #       method generate_episode() to generate training data.
@@ -38,11 +42,12 @@ class Reinforce(object):
         plt.ion()
         plt.figure()
 
-        gamma   = 1.0
-        saveInt = 5000
-        testInt = 1000
+        gamma    = 1.0
+        saveInt  = 1000
+        testInt  = 1000
+        tPlotInt = 1000
 
-        for ep in xrange(numEps):
+        for ep in xrange(nTrainEps):
 
             if ep % saveInt == 0: self.save_model_weights(ep)
             if ep % testInt == 0: self.test(env, 100, ep)
@@ -58,12 +63,20 @@ class Reinforce(object):
             Gt     = np.matrix(GtTemp)
             states = np.matrix(states)
 
+            self.tEpsX.append(ep);
+            self.tCumRews.append(np.sum(rewards))
+
+            if ep % tPlotInt == 0:
+                plt.plot(self.tEpsX, self.tCumRews, color='Red')
+                plt.pause(0.001)
+
             print('ep:%s, len:%s, Gt[0]:%s, ctRew:%s, cRew:%s' %
                  (ep, len(trew), Gt[0], np.sum(trew), np.sum(rewards)))
 
             self.model.train_on_batch(states, Gt)
 
-        self.save_model_weights(numEps)
+        self.save_model_weights(nTrainEps)
+
         plt.show(block=True)
 
     def test(self, env, numEps, trainEps):
@@ -80,7 +93,7 @@ class Reinforce(object):
                                                     self.meanRews[-1],
                                                     self.stdRews[-1]))
 
-        plt.errorbar(self.epsX, self.meanRews, yerr=self.stdRews)
+        plt.errorbar(self.epsX, self.meanRews, yerr=self.stdRews, , color='Yellow')
         plt.pause(0.001)
 
     def generate_episode(self, env):
@@ -118,8 +131,8 @@ class Reinforce(object):
         return states, actions, rewards
 
     def save_model_weights(self, prefix):
-        self.model.save_weights('./store/%s_weights.ckpt' % prefix, overwrite=True)
-        print('saved ./model/%s_weights.ckpt' % prefix)
+        self.model.save_weights('%s%s_weights.ckpt' % (self.storePath, prefix), overwrite=True)
+        print('saved %s%s_weights.ckpt' % (self.storePath, prefix))
 
     def load_model_weights(self, weight_file):
         self.model.load_weights(weight_file)
@@ -128,21 +141,21 @@ def parse_arguments():
     # Command-line flags are defined here.
     parser = argparse.ArgumentParser()
     parser.add_argument('--modelPath', dest='modelPath', type=str, default='')
-    parser.add_argument('--numEps', dest='numEps', type=int, default=55000)
+    parser.add_argument('--nTrainEps', dest='nTrainEps', type=int, default=55000)
     parser.add_argument('--lr', dest='lr', type=float, default=5e-4)
-    parser.add_argument('--loadWeight', dest='loadWeight', type=str, default='')
-    parser.add_argument('--storeWeight', dest='storeWeight', type=str, default='')
+    parser.add_argument('--lWPath', dest='lWPath', type=str, default='')
+    parser.add_argument('--sWPath', dest='sWPath', type=str, default='')
 
     return parser.parse_args()
 
 def main(args):
     # Parse command-line arguments.
-    args              = parse_arguments()
-    modelPath         = args.modelPath
-    numEps            = args.numEps
-    lr                = args.lr
-    loadWeight        = args.loadWeight
-    storeWeight       = args.storeWeight
+    args      = parse_arguments()
+    modelPath = args.modelPath
+    nTrainEps = args.nTrainEps
+    lr        = args.lr
+    lWPath    = args.lWPath
+    sWPath    = args.sWPath
 
     # Create the environment.
     env = gym.make('LunarLander-v2')
@@ -151,10 +164,10 @@ def main(args):
     with open(modelPath, 'r') as f: model = keras.models.model_from_json(f.read())
 
     # TODO: Train the model using REINFORCE and plot the learning curve.
-    reInfModel = Reinforce(model, lr, loadWeight, storeWeight)
+    reInfModel = Reinforce(model, lr, lWPath, sWPath)
 
-    reInfModel.train(env, numEps)
-    # reInfModel.test(env, numEps, 0)
+    reInfModel.train(env, nTrainEps)
+    # reInfModel.test(env, nTrainEps, 0)
 
 
 if __name__ == '__main__':

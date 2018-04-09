@@ -35,10 +35,10 @@ class Imitation():
 
     def run_model(self, env, render=False):
         # Generates an episode by running the cloned policy on the given env.
-        return Imitation.generate_episode(self.model, env, render)
+        return Imitation.generate_episode(self.model, env, render=True, pB=True)
 
     @staticmethod
-    def generate_episode(model, env, render=False):
+    def generate_episode(model, env, render=False, pB=False):
         # Generates an episode by running the given model on the given env.
         # Returns:
         # - a list of states, indexed by time step
@@ -54,7 +54,7 @@ class Imitation():
         nstate = envir.reset()
         max_epi_len = 1000
         for _ in xrange(max_epi_len):
-            # if render: envir.render()
+            if render: envir.render()
             states += [nstate]
             n = nstate
             np_array = np.array([[n[i] for i in xrange(len(n))]])
@@ -65,6 +65,10 @@ class Imitation():
             actions += [onehot]
             nstate, rew, t, _ = envir.step(action)
             rewards += [rew]
+
+            if pB:
+                print(np.sum(rewards))
+                time.sleep(0.1)
 
             if t: break
 
@@ -91,7 +95,6 @@ class Imitation():
             self.model.fit(x=np.array(states), y=np.array(actions), epochs=num_epochs)
 
         [loss, acc] = self.model.evaluate(np.array(States), np.array(Actions))
-
 
         return loss, acc
 
@@ -133,14 +136,14 @@ def main(args):
     # TODO: Train cloned models using imitation learning, and record their
     #       performance.
 
-    imitation1 = Imitation(model_config_path, expert_weights_path)
-    (loss1, acc1) = imitation1.train(env, num_episodes=1, render = False)
+    # imitation1 = Imitation(model_config_path, expert_weights_path)
+    # (loss1, acc1) = imitation1.train(env, num_episodes=1, render = False)
 
-    imitation10 = Imitation(model_config_path, expert_weights_path)
-    (loss10, acc10) = imitation10.train(env, num_episodes=10, render = False)
+    # imitation10 = Imitation(model_config_path, expert_weights_path)
+    # (loss10, acc10) = imitation10.train(env, num_episodes=10, render = False)
 
-    imitation50 = Imitation(model_config_path, expert_weights_path)
-    (loss50, acc50) = imitation50.train(env, num_episodes=50, render = False)
+    # imitation50 = Imitation(model_config_path, expert_weights_path)
+    # (loss50, acc50) = imitation50.train(env, num_episodes=50, render = False)
 
     imitation100 = Imitation(model_config_path, expert_weights_path)
     (loss100, acc100) = imitation100.train(env, num_episodes=100, render = False)
@@ -155,38 +158,38 @@ def main(args):
 
         return np.mean(rewards), np.std(rewards)
 
-    (mean1, std1) = calculate_mean_std(imitation1, True)
-    (mean10, std10) = calculate_mean_std(imitation10, True)
-    (mean50, std50) = calculate_mean_std(imitation50, False)
+    # (mean1, std1) = calculate_mean_std(imitation1, True)
+    # (mean10, std10) = calculate_mean_std(imitation10, True)
+    # (mean50, std50) = calculate_mean_std(imitation50, False)
     (mean100, std100) = calculate_mean_std(imitation100, False)
 
 
-    def calculate_mean_std_exp(imit, rend, num_episodes=50):
-        rewards = []
-        for _ in xrange(num_episodes):
-            _, _, rew = imit.run_expert(env, rend)
-            rewards.append(np.sum(rew))
+    # def calculate_mean_std_exp(imit, rend, num_episodes=50):
+    #     rewards = []
+    #     for _ in xrange(num_episodes):
+    #         _, _, rew = imit.run_expert(env, rend)
+    #         rewards.append(np.sum(rew))
 
-        return np.mean(rewards), np.std(rewards)
+    #     return np.mean(rewards), np.std(rewards)
 
-    (meanE1, stdE1) = calculate_mean_std_exp(imitation1, True)
-    (meanE10, stdE10) = calculate_mean_std_exp(imitation10, True)
-    (meanE50, stdE50) = calculate_mean_std_exp(imitation50, False)
-    (meanE100, stdE100) = calculate_mean_std_exp(imitation100, False)
+    # (meanE1, stdE1) = calculate_mean_std_exp(imitation1, True)
+    # (meanE10, stdE10) = calculate_mean_std_exp(imitation10, True)
+    # (meanE50, stdE50) = calculate_mean_std_exp(imitation50, False)
+    # (meanE100, stdE100) = calculate_mean_std_exp(imitation100, False)
 
-    print "(loss, acc) = ", (loss1, acc1), (loss10, acc10), (loss50, acc50), (loss100, acc100)
+    # print "(loss, acc) = ", (loss1, acc1), (loss10, acc10), (loss50, acc50), (loss100, acc100)
 
-    print "mean, std: (clonded)"
-    print mean1, std1
-    print mean10, std10
-    print mean50, std50
-    print mean100, std100
+    # print "mean, std: (clonded)"
+    # print mean1, std1
+    # print mean10, std10
+    # print mean50, std50
+    # print mean100, std100
 
-    print "mean, std: (expert)"
-    print meanE1, stdE1
-    print meanE10, stdE10
-    print meanE50, stdE50
-    print meanE100, stdE100
+    # print "mean, std: (expert)"
+    # print meanE1, stdE1
+    # print meanE10, stdE10
+    # print meanE50, stdE50
+    # print meanE100, stdE100
 
 
 if __name__ == '__main__':

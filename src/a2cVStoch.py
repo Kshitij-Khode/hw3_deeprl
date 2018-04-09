@@ -6,10 +6,10 @@ import numpy      as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from keras              import optimizers
-from keras.layers.core  import Dense
+from keras     import optimizers
+from reinforce import Reinforce
 
-class A2C(object):
+class A2C(Reinforce):
     # Implementation of N-step Advantage Actor Critic.
     # This class inherits the Reinforce class, so for example, you can reuse
     # generate_episode() here.
@@ -44,11 +44,8 @@ class A2C(object):
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=keras.optimizers.Adam(lr=lr))
         self.model.summary()
-
-        self.critic.layers.pop()
-        self.critic.add(Dense(1, kernel_initializer='lecun_uniform', name='output_layer'))
         self.critic.compile(loss='mean_squared_error',
-                            optimizer=keras.optimizers.Adam(lr=criticLr))
+                           optimizer=keras.optimizers.Adam(lr=criticLr))
         self.critic.summary()
 
         if lModWPath:  self.loadWeights(self.model, lModWPath)
@@ -81,20 +78,17 @@ class A2C(object):
 
             states, actions, rewards = self.generate_episode(env)
 
-            labelsP = []
-            labelsV = []
+            labels = []
             for t in xrange(len(states)):
                 Vt = 0 if t+self.n >= len(states) \
-                       else self.critic.predict(np.expand_dims(states[t+self.n],0))[0]
+                       else self.critic.predict(np.expand_dims(states[t+self.n],0))[0,actions[t]]
                 Rt = (pow(gamma,self.n)*Vt) + (np.sum([pow(gamma,k)*rewards[t+k] \
                                                      if t+k < len(states)        \
                                                      else 0                      \
                                                      for k in xrange(self.n)]))
-                labelsP.append([Rt-Vt if i == actions[t] else 0 for i in xrange(4)])
-                labelsV.append(Rt-Vt)
+                labels.append([Rt-Vt if i == actions[t] else 0 for i in xrange(4)])
 
-            labelsP = np.matrix(labelsP)
-            labelsV = np.matrix(labelsV).transpose()
+            labels = np.matrix(labels)
             states = np.matrix(states)
 
             self.tEpsX.append(ep)
@@ -106,8 +100,8 @@ class A2C(object):
 
             print('ep:%s, len:%s, cRew:%s' % (ep, len(rewards), np.sum(rewards)))
 
-            self.model.train_on_batch(states, labelsP)
-            self.critic.train_on_batch(states, labelsV)
+            self.model.train_on_batch(states, labels)
+            self.critic.train_on_batch(states, labels)
 
         self.saveWeights(self.model, '%s%s' % (nTrainEps,'model'))
         self.saveWeights(self.critic, '%s%s' % (nTrainEps,'critic'))

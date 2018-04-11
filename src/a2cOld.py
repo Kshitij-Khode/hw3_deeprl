@@ -52,6 +52,8 @@ class A2C(object):
 
         self.critic.layers.pop()
         self.critic.add(Dense(1, kernel_initializer='lecun_uniform', name='output_layer'))
+        self.critic.compile(loss='mean_squared_error',
+                            optimizer=keras.optimizers.Adam(lr=criticLr))
         self.critic.summary()
 
         if lModWPath:  self.loadWeights(self.model, lModWPath)
@@ -150,7 +152,7 @@ class A2C(object):
         state   = env.reset()
 
         for _ in itertools.count():
-            env.render()
+            # env.render()
 
             actionProbs = self.model.predict(np.expand_dims(state,0))[0]
 
@@ -210,9 +212,9 @@ def main(args):
     # TODO: Train the model using A2C and plot the learning curves.
     reInfModel = A2C(modelPath, lr, criticLr, lModWPath, lCritWPath, sWPath, n)
 
-    # reInfModel.train(env, nTrainEps)
+    reInfModel.train(env, nTrainEps)
 
-    reInfModel.test(env, nTrainEps, 0)
+    # reInfModel.test(env, nTrainEps, 0)
 
 if __name__ == '__main__':
     main(sys.argv)

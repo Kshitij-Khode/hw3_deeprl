@@ -4,10 +4,12 @@ import sys, argparse, keras, gym, matplotlib, time, itertools, os
 
 import numpy      as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
+from keras.models       import Sequential
 from keras              import optimizers
 from keras.layers.core  import Dense
+from keras.layers.advanced_activations import LeakyReLU
 
 class A2C(object):
     # Implementation of N-step Advantage Actor Critic.
@@ -37,6 +39,9 @@ class A2C(object):
 
         print('A2C __init__: lr:%s, criticLr:%s, n:%s' % (lr, criticLr, n))
 
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True)))
+        keras.backend.tensorflow_backend.set_session(self.sess)
+
         # Load the actor model from file.
         with open(modelPath, 'r') as f: self.model  = keras.models.model_from_json(f.read())
         with open(modelPath, 'r') as f: self.critic = keras.models.model_from_json(f.read())
@@ -45,8 +50,12 @@ class A2C(object):
                            optimizer=keras.optimizers.Adam(lr=lr))
         self.model.summary()
 
-        self.critic.layers.pop()
-        self.critic.add(Dense(1, kernel_initializer='lecun_uniform', name='output_layer'))
+        self.critic = Sequential()
+        self.critic.add(Dense(32, input_shape=(8,)))
+        self.critic.add(LeakyReLU(alpha=0.01))
+        self.critic.add(Dense(32))
+        self.critic.add(LeakyReLU(alpha=0.01))
+        self.critic.add(Dense(1))
         self.critic.compile(loss='mean_squared_error',
                             optimizer=keras.optimizers.Adam(lr=criticLr))
         self.critic.summary()
@@ -58,14 +67,16 @@ class A2C(object):
             self.storePath = sWPath
             if not os.path.exists(self.storePath): os.makedirs(self.storePath)
 
+        tf.summary.FileWriter(self.storePath, self.sess.graph)
+
 
     def train(self, env, nTrainEps):
         # Trains the model on a single episode using A2C.
         # TODO: Implement this method. It may be helpful to call the class
         #       method generate_episode() to generate training data.
 
-        plt.ion()
-        plt.figure()
+        # plt.ion()
+        # plt.figure()
 
         gamma    = 1.0
         saveInt  = 1000
@@ -100,9 +111,9 @@ class A2C(object):
             self.tEpsX.append(ep)
             self.tCumRews.append(np.sum(rewards))
 
-            if ep % tPlotInt == 0:
-                plt.plot(self.tEpsX, self.tCumRews, color='Red')
-                plt.pause(0.001)
+            # if ep % tPlotInt == 0:
+            #     plt.plot(self.tEpsX, self.tCumRews, color='Red')
+            #     plt.pause(0.001)
 
             print('ep:%s, len:%s, cRew:%s' % (ep, len(rewards), np.sum(rewards)))
 
@@ -112,7 +123,7 @@ class A2C(object):
         self.saveWeights(self.model, '%s%s' % (nTrainEps,'model'))
         self.saveWeights(self.critic, '%s%s' % (nTrainEps,'critic'))
 
-        plt.show(block=True)
+        # plt.show(block=True)
 
 
     def test(self, env, numEps, trainEps):
@@ -129,8 +140,8 @@ class A2C(object):
                                                     self.meanRews[-1],
                                                     self.stdRews[-1]))
 
-        plt.errorbar(self.epsX, self.meanRews, yerr=self.stdRews, color='Yellow')
-        plt.pause(0.001)
+        # plt.errorbar(self.epsX, self.meanRews, yerr=self.stdRews, color='Yellow')
+        # plt.pause(0.001)
 
     def generate_episode(self, env):
         # Generates an episode by executing the current policy in the given env.
@@ -145,7 +156,7 @@ class A2C(object):
         state   = env.reset()
 
         for _ in itertools.count():
-            # env.render()
+            env.render()
 
             actionProbs = self.model.predict(np.expand_dims(state,0))[0]
 
@@ -205,9 +216,9 @@ def main(args):
     # TODO: Train the model using A2C and plot the learning curves.
     reInfModel = A2C(modelPath, lr, criticLr, lModWPath, lCritWPath, sWPath, n)
 
-    reInfModel.train(env, nTrainEps)
+    # reInfModel.train(env, nTrainEps)
 
-    # reInfModel.test(env, nTrainEps, 0)
+    reInfModel.test(env, nTrainEps, 0)
 
 if __name__ == '__main__':
     main(sys.argv)

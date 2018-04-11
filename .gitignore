@@ -1,2 +1,3 @@
 /dl_env/
 *.pyc
+./src/store/

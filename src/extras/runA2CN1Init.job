@@ -3,7 +3,7 @@
 #SBATCH -p GPU-shared
 #SBATCH --ntasks-per-node 2
 #SBATCH --gres=gpu:p100:1
-#SBATCH -t 10:00:00
+#SBATCH -t 24:00:00
 
 # This will request 2 CPU cores, an one P100 on a shared GPU node
 # If the job is still running after 10 hours, it will be automatically killed.
@@ -28,7 +28,7 @@ cd /pylon5/cc5fp3p/kkhode/singularity/sandbox/hw3_deeprl/src/
 
 # Running the script PYTHON_SCRIPT inside the singularity: This is of the form:
 # singularity exec <PATH_TO_IMAGE>/tf-gpu.img <PATH_TO_SCRIPT>/<SCRIPT_NAME>.py <ARGUMENTS>
-singularity exec /pylon5/cc5fp3p/kkhode/singularity/tf-gpu.img /pylon5/cc5fp3p/kkhode/singularity/sandbox/hw3_deeprl/src/extras/runA2C.bash
+singularity exec /pylon5/cc5fp3p/kkhode/singularity/tf-gpu.img /pylon5/cc5fp3p/kkhode/singularity/sandbox/hw3_deeprl/src/extras/runA2CN1Init.bash
 
 # I have used the flag #!/usr/bin/env python at the starting of my python scripts,
 # otherwise you would run python scripts/PYTHON_SCRIPT.py above.
